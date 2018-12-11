@@ -248,6 +248,7 @@ func exchange(msg *dns.Msg, tsig bool, meta interface{}) (*dns.Msg, error) {
 
 	// If we allow setting the transport default then adjust these
 	c.Net = "udp"
+	c.Timeout = 10
 	retry_tcp := false
 
 	msg.RecursionDesired = false

@@ -314,7 +314,9 @@ Retry:
 	r, _, err := c.Exchange(msg, srv_addr)
 
 	switch err {
-	case dns.ErrTruncated:
+	case dns.ErrConnEmpty:
+	case dns.ErrShortRead:
+	case dns.ErrTime:
 		if retry_tcp {
 			switch c.Net {
 			case "udp":

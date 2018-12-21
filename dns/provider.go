@@ -333,8 +333,8 @@ Retry:
 				return nil, fmt.Errorf("Unknown transport: %s", c.Net)
 			}
 		} else {
- 			msg.SetEdns0(dns.DefaultMsgSize, false)
- 			retry_tcp = true
+			msg.SetEdns0(dns.DefaultMsgSize, false)
+			retry_tcp = true
 		}
 
 		goto Retry

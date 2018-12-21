@@ -248,7 +248,6 @@ func exchange(msg *dns.Msg, tsig bool, meta interface{}) (*dns.Msg, error) {
 
 	// If we allow setting the transport default then adjust these
 	c.Net = "udp"
-	retry_tcp := false
 
 	msg.RecursionDesired = false
 
@@ -260,28 +259,26 @@ Retry:
 	r, _, err := c.Exchange(msg, srv_addr)
 
 	switch err {
-	case dns.ErrTruncated:
-		if retry_tcp {
-			switch c.Net {
-			case "udp":
-				c.Net = "tcp"
-			case "udp4":
-				c.Net = "tcp4"
-			case "udp6":
-				c.Net = "tcp6"
-			default:
-				return nil, fmt.Errorf("Unknown transport: %s", c.Net)
-			}
-		} else {
-			msg.SetEdns0(dns.DefaultMsgSize, false)
-			retry_tcp = true
+	case nil:
+		return r, nil
+	default:
+		switch c.Net {
+		case "udp":
+			c.Net = "tcp"
+		case "tcp":
+			c.Net = "udp"
+		case "":
+			c.Net = "tcp"
+		default:
+			return nil, fmt.Errorf("Unknown transport: %s", c.Net)
 		}
+		msg.SetEdns0(dns.DefaultMsgSize, false)
 
 		goto Retry
-	case nil:
-		fallthrough
-	default:
-		// do nothing
+	}
+
+	if err != nil {
+		goto Retry
 	}
 
 	return r, err

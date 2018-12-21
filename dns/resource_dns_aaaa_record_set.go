@@ -68,7 +68,7 @@ func resourceDnsAAAARecordSetRead(d *schema.ResourceData, meta interface{}) erro
 
 		rec_fqdn := fmt.Sprintf("%s.%s", rec_name, rec_zone)
 
-Retry:
+	Retry:
 		msg := new(dns.Msg)
 		msg.SetQuestion(rec_fqdn, dns.TypeAAAA)
 

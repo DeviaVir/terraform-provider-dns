@@ -330,12 +330,6 @@ Retry:
 
 		goto Retry
 	}
-
-	if err != nil {
-		goto Retry
-	}
-
-	return r, err
 }
 
 func resourceDnsImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {

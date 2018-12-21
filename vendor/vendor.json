@@ -502,12 +502,10 @@
 			"revisionTime": "2016-08-03T19:07:31Z"
 		},
 		{
-			"checksumSHA1": "XTeOihCDhjG6ltUKExoJ2uEzShk=",
+			"checksumSHA1": "HfNEcSJhvpTA65aPUCtLmalUOEY=",
 			"path": "github.com/miekg/dns",
-			"revision": "5364553f1ee9cddc7ac8b62dce148309c386695b",
-			"revisionTime": "2018-01-25T10:38:03Z",
-			"version": "v1.0.4",
-			"versionExact": "v1.0.4"
+			"revision": "450ab7d57fb96d2a1d85cc507d30a91d00185dd4",
+			"revisionTime": "2018-12-04T07:31:40Z"
 		},
 		{
 			"checksumSHA1": "guxbLo8KHHBeM0rzou4OTzzpDNs=",
@@ -651,6 +649,12 @@
 			"path": "golang.org/x/net/ipv6",
 			"revision": "0ed95abb35c445290478a5348a7b38bb154135fd",
 			"revisionTime": "2018-01-24T06:08:02Z"
+		},
+		{
+			"checksumSHA1": "lIVptsECd1xirIpTzRfKwGTAXAo=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "4d1cda033e0619309c606fc686de3adcf599539e",
+			"revisionTime": "2018-12-13T07:38:38Z"
 		}
 	],
 	"rootPath": "github.com/DeviaVir/terraform-provider-dns"

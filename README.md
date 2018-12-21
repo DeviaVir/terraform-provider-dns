@@ -16,17 +16,17 @@ Requirements
 Building The Provider
 ---------------------
 
-Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-dns`
+Clone repository to: `$GOPATH/src/github.com/DeviaVir/terraform-provider-dns`
 
 ```sh
-$ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
+$ mkdir -p $GOPATH/src/github.com/DeviaVir; cd $GOPATH/src/github.com/DeviaVir
 $ git clone git@github.com:terraform-providers/terraform-provider-dns
 ```
 
 Enter the provider directory and build the provider
 
 ```sh
-$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-dns
+$ cd $GOPATH/src/github.com/DeviaVir/terraform-provider-dns
 $ make build
 ```
 
@@ -56,7 +56,7 @@ $ make test
 
 In order to run acceptance tests, excluding ones requiring a `DNS_UPDATE_SERVER` run `make testacc`.
 
-To run the full suite of acceptance tests run `./dns/acceptance.sh`. You will need docker installed. 
+To run the full suite of acceptance tests run `./dns/acceptance.sh`. You will need docker installed.
 
 *Note:* Acceptance tests create real resources, and often cost money to run.
 

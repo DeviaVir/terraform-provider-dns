@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/DeviaVir/terraform-provider-dns/dns"
 	"github.com/hashicorp/terraform/plugin"
-	"github.com/terraform-providers/terraform-provider-dns/dns"
 )
 
 func main() {

@@ -348,9 +348,11 @@ Retry:
 
 	r, _, err := c.Exchange(msg, srv_addr)
 
-	if err != nil {
+	if msg.Truncated {
 		if retry_tcp {
 			switch c.Net {
+			case "tcp":
+				// do nothing
 			case "udp":
 				c.Net = "tcp"
 			case "udp4":
@@ -374,6 +376,14 @@ Retry:
 		retries--
 		goto Retry
 	}
+
+	// Retry SERVFAIL
+	if r.Rcode == dns.RcodeServerFailure && retries > 0 {
+		retries--
+		goto Retry
+	}
+
+	retries = meta.(*DNSClient).retries
 
 	return r, err
 }

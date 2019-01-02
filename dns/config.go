@@ -14,21 +14,22 @@ import (
 type Config struct {
 	server    string
 	port      int
+	transport string
+	timeout   time.Duration
+	retries   int
 	keyname   string
 	keyalgo   string
 	keysecret string
-	transport string
-	timeout   int
 }
 
 type DNSClient struct {
 	c         *dns.Client
 	srv_addr  string
+	transport string
+	retries   int
 	keyname   string
 	keysecret string
 	keyalgo   string
-	transport string
-	timeout   time.Duration
 }
 
 // Configures and returns a fully initialized DNSClient
@@ -61,7 +62,8 @@ func (c *Config) Client() (interface{}, error) {
 		client.c.TsigSecret = map[string]string{keyname: c.keysecret}
 	}
 	client.transport = c.transport
-	client.timeout = time.Duration(c.timeout) * time.Second
+	client.c.Timeout = c.timeout
+	client.retries = c.retries
 	return &client, nil
 }
 

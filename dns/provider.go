@@ -2,6 +2,7 @@ package dns
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +11,13 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/miekg/dns"
+)
+
+const (
+	defaultPort      = 53
+	defaultRetries   = 3
+	defaultTimeout   = "0"
+	defaultTransport = "udp"
 )
 
 // Provider returns a schema.Provider for DNS dynamic updates.
@@ -39,7 +47,32 @@ func Provider() terraform.ResourceProvider {
 									return port, err
 								}
 
-								return 53, nil
+								return defaultPort, nil
+							},
+						},
+						"transport": &schema.Schema{
+							Type:        schema.TypeString,
+							Optional:    true,
+							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_TRANSPORT", defaultTransport),
+						},
+						"timeout": &schema.Schema{
+							Type:        schema.TypeString,
+							Optional:    true,
+							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_TIMEOUT", defaultTimeout),
+						},
+						"retries": &schema.Schema{
+							Type:     schema.TypeInt,
+							Optional: true,
+							DefaultFunc: func() (interface{}, error) {
+								if env := os.Getenv("DNS_UPDATE_RETRIES"); env != "" {
+									retries, err := strconv.Atoi(env)
+									if err != nil {
+										err = fmt.Errorf("invalid DNS_UPDATE_RETRIES environment variables: %s", err)
+									}
+									return retries, nil
+								}
+
+								return defaultRetries, nil
 							},
 						},
 						"key_name": &schema.Schema{
@@ -56,35 +89,6 @@ func Provider() terraform.ResourceProvider {
 							Type:        schema.TypeString,
 							Optional:    true,
 							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_KEYSECRET", nil),
-						},
-						"transport": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-							DefaultFunc: func() (interface{}, error) {
-								if envTransportType := os.Getenv("DNS_TRANSPORT_TYPE"); envTransportType != "" {
-									if envTransportType != "tcp" && envTransportType != "tcp-tls" {
-										return "", nil
-									}
-									return envTransportType, nil
-								}
-
-								return "", nil
-							},
-						},
-						"timeout": &schema.Schema{
-							Type:     schema.TypeInt,
-							Optional: true,
-							DefaultFunc: func() (interface{}, error) {
-								if timeoutStr := os.Getenv("DNS_TIMEOUT"); timeoutStr != "" {
-									timeout, err := strconv.Atoi(timeoutStr)
-									if err != nil {
-										err = fmt.Errorf("invalid DNS_TIMEOUT environment variable: %s", err)
-									}
-									return timeout, err
-								}
-
-								return 0, nil
-							},
 						},
 					},
 				},
@@ -114,8 +118,9 @@ func Provider() terraform.ResourceProvider {
 
 func configureProvider(d *schema.ResourceData) (interface{}, error) {
 
-	var server, keyname, keyalgo, keysecret, transport string
-	var port, timeout int
+	var server, transport, timeout, keyname, keyalgo, keysecret string
+	var port, retries int
+	var duration time.Duration
 
 	// if the update block is missing, schema.EnvDefaultFunc is not called
 	if v, ok := d.GetOk("update"); ok {
@@ -126,6 +131,15 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 		if val, ok := update["server"]; ok {
 			server = val.(string)
 		}
+		if val, ok := update["transport"]; ok {
+			transport = val.(string)
+		}
+		if val, ok := update["timeout"]; ok {
+			timeout = val.(string)
+		}
+		if val, ok := update["retries"]; ok {
+			retries = int(val.(int))
+		}
 		if val, ok := update["key_name"]; ok {
 			keyname = val.(string)
 		}
@@ -135,12 +149,7 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 		if val, ok := update["key_secret"]; ok {
 			keysecret = val.(string)
 		}
-		if val, ok := update["transport"]; ok {
-			transport = val.(string)
-		}
-		if val, ok := update["timeout"]; ok {
-			timeout = int(val.(int))
-		}
+
 	} else {
 		if len(os.Getenv("DNS_UPDATE_SERVER")) > 0 {
 			server = os.Getenv("DNS_UPDATE_SERVER")
@@ -155,7 +164,27 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 				return nil, fmt.Errorf("invalid DNS_UPDATE_PORT environment variable: %s", err)
 			}
 		} else {
-			port = 53
+			port = defaultPort
+		}
+		if len(os.Getenv("DNS_UPDATE_TRANSPORT")) > 0 {
+			transport = os.Getenv("DNS_UPDATE_TRANSPORT")
+		} else {
+			transport = defaultTransport
+		}
+		if len(os.Getenv("DNS_UPDATE_TIMEOUT")) > 0 {
+			timeout = os.Getenv("DNS_UPDATE_TIMEOUT")
+		} else {
+			timeout = defaultTimeout
+		}
+		if len(os.Getenv("DNS_UPDATE_RETRIES")) > 0 {
+			var err error
+			env := os.Getenv("DNS_UPDATE_RETRIES")
+			retries, err = strconv.Atoi(env)
+			if err != nil {
+				return nil, fmt.Errorf("invalid DNS_UPDATE_RETRIES environment variable: %s", err)
+			}
+		} else {
+			retries = defaultRetries
 		}
 		if len(os.Getenv("DNS_UPDATE_KEYNAME")) > 0 {
 			keyname = os.Getenv("DNS_UPDATE_KEYNAME")
@@ -166,32 +195,34 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 		if len(os.Getenv("DNS_UPDATE_KEYSECRET")) > 0 {
 			keysecret = os.Getenv("DNS_UPDATE_KEYSECRET")
 		}
-		if len(os.Getenv("DNS_TRANSPORT_TYPE")) > 0 {
-			transport = os.Getenv("DNS_TRANSPORT_TYPE")
-		}
-		if transport != "tcp" && transport != "tcp-tls" {
-			transport = "" // https://github.com/miekg/dns/blob/6ae357d393978566133a91aa1d4207b4f67da2c1/client.go#L31
-		}
-		if len(os.Getenv("DNS_TIMEOUT")) > 0 {
-			var err error
-			timeoutStr := os.Getenv("DNS_TIMEOUT")
-			timeout, err = strconv.Atoi(timeoutStr)
+	}
+
+	if timeout != "" {
+		var err error
+		// Try parsing as a duration
+		duration, err = time.ParseDuration(timeout)
+		if err != nil {
+			// Failing that, convert to an integer and treat as seconds
+			seconds, err := strconv.Atoi(timeout)
 			if err != nil {
-				return nil, fmt.Errorf("invalid DNS_TIMEOUT environment variable: %s", err)
+				return nil, fmt.Errorf("invalid timeout: %s", timeout)
 			}
-		} else {
-			timeout = 0
+			duration = time.Duration(seconds) * time.Second
+		}
+		if duration < 0 {
+			return nil, fmt.Errorf("timeout cannot be negative: %s", duration)
 		}
 	}
 
 	config := Config{
 		server:    server,
 		port:      port,
+		transport: transport,
+		timeout:   duration,
+		retries:   retries,
 		keyname:   keyname,
 		keyalgo:   keyalgo,
 		keysecret: keysecret,
-		transport: transport,
-		timeout:   timeout,
 	}
 
 	return config.Client()
@@ -292,16 +323,20 @@ func getPtrVal(record interface{}) (string, int, error) {
 	return ptr, ttl, nil
 }
 
+func isTimeout(err error) bool {
+
+	timeout, ok := err.(net.Error)
+	return ok && timeout.Timeout()
+}
+
 func exchange(msg *dns.Msg, tsig bool, meta interface{}) (*dns.Msg, error) {
 
 	c := meta.(*DNSClient).c
 	srv_addr := meta.(*DNSClient).srv_addr
 	keyname := meta.(*DNSClient).keyname
 	keyalgo := meta.(*DNSClient).keyalgo
-
-	// If we allow setting the transport default then adjust these
 	c.Net = meta.(*DNSClient).transport
-	c.Timeout = meta.(*DNSClient).timeout
+	retries := meta.(*DNSClient).retries
 	retry_tcp := false
 
 	msg.RecursionDesired = false
@@ -313,10 +348,7 @@ Retry:
 
 	r, _, err := c.Exchange(msg, srv_addr)
 
-	switch err {
-	case nil:
-		return r, nil
-	default:
+	if err != nil {
 		if retry_tcp {
 			switch c.Net {
 			case "udp":
@@ -325,10 +357,6 @@ Retry:
 				c.Net = "tcp4"
 			case "udp6":
 				c.Net = "tcp6"
-			case "tcp":
-				c.Net = "udp"
-			case "":
-				c.Net = "tcp"
 			default:
 				return nil, fmt.Errorf("Unknown transport: %s", c.Net)
 			}
@@ -337,8 +365,17 @@ Retry:
 			retry_tcp = true
 		}
 
+		// Reset retries counter on protocol change
+		retries = meta.(*DNSClient).retries
 		goto Retry
 	}
+
+	if isTimeout(err) && retries > 0 {
+		retries--
+		goto Retry
+	}
+
+	return r, err
 }
 
 func resourceDnsImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {

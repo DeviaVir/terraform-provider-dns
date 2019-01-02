@@ -66,7 +66,6 @@ func resourceDnsCnameRecordRead(d *schema.ResourceData, meta interface{}) error 
 
 		rec_fqdn := fmt.Sprintf("%s.%s", rec_name, rec_zone)
 
-	Retry:
 		msg := new(dns.Msg)
 		msg.SetQuestion(rec_fqdn, dns.TypeCNAME)
 
@@ -75,8 +74,6 @@ func resourceDnsCnameRecordRead(d *schema.ResourceData, meta interface{}) error 
 			return fmt.Errorf("Error querying DNS record: %s", err)
 		}
 		switch r.Rcode {
-		case dns.RcodeServerFailure:
-			goto Retry
 		case dns.RcodeSuccess:
 			break
 		case dns.RcodeNameError:

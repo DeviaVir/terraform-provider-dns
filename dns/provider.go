@@ -130,6 +130,7 @@ func Provider() terraform.ResourceProvider {
 			"dns_mx_record_set":    dataSourceDnsMXRecordSet(),
 			"dns_ns_record_set":    dataSourceDnsNSRecordSet(),
 			"dns_ptr_record_set":   dataSourceDnsPtrRecordSet(),
+			"dns_srv_record_set":   dataSourceDnsSRVRecordSet(),
 			"dns_txt_record_set":   dataSourceDnsTxtRecordSet(),
 		},
 
@@ -140,6 +141,7 @@ func Provider() terraform.ResourceProvider {
 			"dns_mx_record_set":   resourceDnsMXRecordSet(),
 			"dns_ns_record_set":   resourceDnsNSRecordSet(),
 			"dns_ptr_record":      resourceDnsPtrRecord(),
+			"dns_srv_record_set":  resourceDnsSRVRecordSet(),
 			"dns_txt_record_set":  resourceDnsTXTRecordSet(),
 		},
 

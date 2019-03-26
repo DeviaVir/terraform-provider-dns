@@ -48,7 +48,6 @@ func Provider() terraform.ResourceProvider {
 								}
 
 								return defaultPort, nil
-<<<<<<< HEAD
 							},
 						},
 						"transport": &schema.Schema{
@@ -74,8 +73,6 @@ func Provider() terraform.ResourceProvider {
 								}
 
 								return defaultRetries, nil
-=======
->>>>>>> dfe44a4f6a9b8a6f6826849c3dbee3e22b42c2ae
 							},
 						},
 						"transport": &schema.Schema{
@@ -403,16 +400,17 @@ Retry:
 		// Reset retries counter on protocol change
 		retries = meta.(*DNSClient).retries
 		goto Retry
-	case nil:
-		if r.Rcode == dns.RcodeServerFailure && retries > 0 {
-			retries--
-			goto Retry
-		}
-	default:
-		if isTimeout(err) && retries > 0 {
-			retries--
-			goto Retry
-		}
+	}
+
+	if isTimeout(err) && retries > 0 {
+		retries--
+		goto Retry
+	}
+
+	// Retry SERVFAIL
+	if r.Rcode == dns.RcodeServerFailure && retries > 0 {
+		retries--
+		goto Retry
 	}
 
 	retries = meta.(*DNSClient).retries

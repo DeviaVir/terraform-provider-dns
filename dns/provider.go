@@ -24,18 +24,18 @@ const (
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"update": &schema.Schema{
+			"update": {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"server": &schema.Schema{
+						"server": {
 							Type:        schema.TypeString,
 							Required:    true,
 							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_SERVER", nil),
 						},
-						"port": &schema.Schema{
+						"port": {
 							Type:     schema.TypeInt,
 							Optional: true,
 							DefaultFunc: func() (interface{}, error) {
@@ -48,6 +48,7 @@ func Provider() terraform.ResourceProvider {
 								}
 
 								return defaultPort, nil
+<<<<<<< HEAD
 							},
 						},
 						"transport": &schema.Schema{
@@ -73,19 +74,46 @@ func Provider() terraform.ResourceProvider {
 								}
 
 								return defaultRetries, nil
+=======
+>>>>>>> dfe44a4f6a9b8a6f6826849c3dbee3e22b42c2ae
 							},
 						},
-						"key_name": &schema.Schema{
+						"transport": &schema.Schema{
+							Type:        schema.TypeString,
+							Optional:    true,
+							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_TRANSPORT", defaultTransport),
+						},
+						"timeout": &schema.Schema{
+							Type:        schema.TypeString,
+							Optional:    true,
+							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_TIMEOUT", defaultTimeout),
+						},
+						"retries": &schema.Schema{
+							Type:     schema.TypeInt,
+							Optional: true,
+							DefaultFunc: func() (interface{}, error) {
+								if env := os.Getenv("DNS_UPDATE_RETRIES"); env != "" {
+									retries, err := strconv.Atoi(env)
+									if err != nil {
+										err = fmt.Errorf("invalid DNS_UPDATE_RETRIES environment variable: %s", err)
+									}
+									return retries, err
+								}
+
+								return defaultRetries, nil
+							},
+						},
+						"key_name": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_KEYNAME", nil),
 						},
-						"key_algorithm": &schema.Schema{
+						"key_algorithm": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_KEYALGORITHM", nil),
 						},
-						"key_secret": &schema.Schema{
+						"key_secret": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_KEYSECRET", nil),
@@ -99,17 +127,20 @@ func Provider() terraform.ResourceProvider {
 			"dns_a_record_set":     dataSourceDnsARecordSet(),
 			"dns_aaaa_record_set":  dataSourceDnsAAAARecordSet(),
 			"dns_cname_record_set": dataSourceDnsCnameRecordSet(),
-			"dns_txt_record_set":   dataSourceDnsTxtRecordSet(),
+			"dns_mx_record_set":    dataSourceDnsMXRecordSet(),
 			"dns_ns_record_set":    dataSourceDnsNSRecordSet(),
 			"dns_ptr_record_set":   dataSourceDnsPtrRecordSet(),
+			"dns_txt_record_set":   dataSourceDnsTxtRecordSet(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
 			"dns_a_record_set":    resourceDnsARecordSet(),
-			"dns_ns_record_set":   resourceDnsNSRecordSet(),
 			"dns_aaaa_record_set": resourceDnsAAAARecordSet(),
 			"dns_cname_record":    resourceDnsCnameRecord(),
+			"dns_mx_record_set":   resourceDnsMXRecordSet(),
+			"dns_ns_record_set":   resourceDnsNSRecordSet(),
 			"dns_ptr_record":      resourceDnsPtrRecord(),
+			"dns_txt_record_set":  resourceDnsTXTRecordSet(),
 		},
 
 		ConfigureFunc: configureProvider,
@@ -370,17 +401,16 @@ Retry:
 		// Reset retries counter on protocol change
 		retries = meta.(*DNSClient).retries
 		goto Retry
-	}
-
-	if isTimeout(err) && retries > 0 {
-		retries--
-		goto Retry
-	}
-
-	// Retry SERVFAIL
-	if r.Rcode == dns.RcodeServerFailure && retries > 0 {
-		retries--
-		goto Retry
+	case nil:
+		if r.Rcode == dns.RcodeServerFailure && retries > 0 {
+			retries--
+			goto Retry
+		}
+	default:
+		if isTimeout(err) && retries > 0 {
+			retries--
+			goto Retry
+		}
 	}
 
 	retries = meta.(*DNSClient).retries
@@ -402,7 +432,7 @@ func resourceDnsImport(d *schema.ResourceData, meta interface{}) ([]*schema.Reso
 	var zone *string
 
 Loop:
-	for l, _ := range labels {
+	for l := range labels {
 
 		msg.SetQuestion(dns.Fqdn(strings.Join(labels[l:], ".")), dns.TypeSOA)
 
@@ -429,7 +459,7 @@ Loop:
 		case dns.RcodeNameError:
 			continue
 		default:
-			return nil, fmt.Errorf("Error querying DNS record: %s", dns.RcodeToString[r.Rcode])
+			return nil, fmt.Errorf("Error querying DNS record: %v (%s)", r.Rcode, dns.RcodeToString[r.Rcode])
 		}
 	}
 
@@ -442,10 +472,83 @@ Loop:
 		return nil, fmt.Errorf("DNS record %s shares no common labels with zone %s", record, *zone)
 	}
 
-	name := strings.Join(labels[:len(labels)-common], ".")
-
-	d.Set("name", name)
 	d.Set("zone", *zone)
+	if name := strings.Join(labels[:len(labels)-common], "."); name != "" {
+		d.Set("name", name)
+	}
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func resourceFQDN(d *schema.ResourceData) string {
+
+	fqdn := d.Get("zone").(string)
+
+	if name, ok := d.GetOk("name"); ok {
+		fqdn = fmt.Sprintf("%s.%s", name.(string), fqdn)
+	}
+
+	return fqdn
+}
+
+func resourceDnsRead(d *schema.ResourceData, meta interface{}, rrType uint16) ([]dns.RR, error) {
+
+	if meta != nil {
+
+		fqdn := resourceFQDN(d)
+
+		msg := new(dns.Msg)
+		msg.SetQuestion(fqdn, rrType)
+
+		r, err := exchange(msg, true, meta)
+		if err != nil {
+			return nil, fmt.Errorf("Error querying DNS record: %s", err)
+		}
+		switch r.Rcode {
+		case dns.RcodeSuccess:
+			// NS records are returned slightly differently
+			if (rrType == dns.TypeNS && len(r.Ns) > 0) || len(r.Answer) > 0 {
+				break
+			}
+			fallthrough
+		case dns.RcodeNameError:
+			return nil, nil
+		default:
+			return nil, fmt.Errorf("Error querying DNS record: %v (%s)", r.Rcode, dns.RcodeToString[r.Rcode])
+		}
+
+		if rrType == dns.TypeNS {
+			return r.Ns, nil
+		}
+		return r.Answer, nil
+	} else {
+		return nil, fmt.Errorf("update server is not set")
+	}
+}
+
+func resourceDnsDelete(d *schema.ResourceData, meta interface{}, rrType uint16) error {
+
+	if meta != nil {
+
+		fqdn := resourceFQDN(d)
+
+		msg := new(dns.Msg)
+
+		msg.SetUpdate(d.Get("zone").(string))
+
+		rr, _ := dns.NewRR(fmt.Sprintf("%s 0 %s", fqdn, dns.TypeToString[rrType]))
+		msg.RemoveRRset([]dns.RR{rr})
+
+		r, err := exchange(msg, true, meta)
+		if err != nil {
+			return fmt.Errorf("Error deleting DNS record: %s", err)
+		}
+		if r.Rcode != dns.RcodeSuccess {
+			return fmt.Errorf("Error deleting DNS record: %v (%s)", r.Rcode, dns.RcodeToString[r.Rcode])
+		}
+
+		return nil
+	} else {
+		return fmt.Errorf("update server is not set")
+	}
 }

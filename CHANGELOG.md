@@ -1,14 +1,27 @@
-## 2.1.0 (Unreleased)
+## 3.0.0 (Unreleased)
 
 NEW FEATURES:
-* All resources can now be imported.
+
+* **New Data Source:** `dns_mx_record_set` [GH-71]
+* **New Resource:** `dns_mx_record_set` [GH-71]
+* **New Resource:** `dns_txt_record_set` [GH-72]
+* All resources can now be imported [GH-37]
+* Allow the creation of apex records [GH-69]
+* Retry DNS queries on timeout [GH-68]
+
+IMPROVEMENTS:
+
+* dependencies: switching to Go 1.11 [GH-73]
+* The provider is now compatible with Terraform v0.12, while retaining compatibility with prior versions.
 
 ## 2.0.0 (May 25, 2018)
 
 BACKWARDS INCOMPATIBILITIES / NOTES:
+
 * Prior versions of the provider would sign requests when sending updates to a DNS server but would not sign the requests to read those values back on subsequent refreshes. For consistency, now _read_ requests are also signed for managed resources in this provider. This does not apply to the data sources, which continue to just send normal unsigned DNS requests as before.
 
 NEW FEATURES:
+
 * Use signed requests when refreshing managed resources ([#35](https://github.com/terraform-providers/terraform-provider-dns/issues/35))
 * data/dns_ptr_record_set: Implement data source for PTR record. ([#32](https://github.com/terraform-providers/terraform-provider-dns/issues/32))
 

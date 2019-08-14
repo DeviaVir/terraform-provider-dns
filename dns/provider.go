@@ -67,31 +67,6 @@ func Provider() terraform.ResourceProvider {
 								if env := os.Getenv("DNS_UPDATE_RETRIES"); env != "" {
 									retries, err := strconv.Atoi(env)
 									if err != nil {
-										err = fmt.Errorf("invalid DNS_UPDATE_RETRIES environment variables: %s", err)
-									}
-									return retries, nil
-								}
-
-								return defaultRetries, nil
-							},
-						},
-						"transport": &schema.Schema{
-							Type:        schema.TypeString,
-							Optional:    true,
-							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_TRANSPORT", defaultTransport),
-						},
-						"timeout": &schema.Schema{
-							Type:        schema.TypeString,
-							Optional:    true,
-							DefaultFunc: schema.EnvDefaultFunc("DNS_UPDATE_TIMEOUT", defaultTimeout),
-						},
-						"retries": &schema.Schema{
-							Type:     schema.TypeInt,
-							Optional: true,
-							DefaultFunc: func() (interface{}, error) {
-								if env := os.Getenv("DNS_UPDATE_RETRIES"); env != "" {
-									retries, err := strconv.Atoi(env)
-									if err != nil {
 										err = fmt.Errorf("invalid DNS_UPDATE_RETRIES environment variable: %s", err)
 									}
 									return retries, err

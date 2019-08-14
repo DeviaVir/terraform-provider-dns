@@ -452,6 +452,8 @@ Loop:
 				switch t := ans.(type) {
 				case *dns.SOA:
 					zone = &t.Hdr.Name
+				case *dns.CNAME:
+					continue Loop
 				}
 			}
 

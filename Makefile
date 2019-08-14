@@ -19,7 +19,7 @@ GOVERSION := 1.12
 PROJECT := github.com/DeviaVir/terraform-provider-dns
 OWNER := $(notdir $(patsubst %/,%,$(dir $(PROJECT))))
 NAME := $(notdir $(PROJECT))
-VERSION := 0.0.1
+VERSION := 0.0.2
 
 # Current system information
 GOOS ?= $(shell go env GOOS)
@@ -190,4 +190,4 @@ _sign:
 	@echo "    git push && git push --tags"
 	@echo ""
 	@echo "And then upload the binaries in dist/!"
-.PHONY: _sign
+	.PHONY: _sign

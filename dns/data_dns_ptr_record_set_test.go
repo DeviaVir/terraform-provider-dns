@@ -18,13 +18,13 @@ func TestAccDataDnsPtrRecordSet_Basic(t *testing.T) {
 			  ip_address = "8.8.8.8"
 			}
 			`,
-			"google-public-dns-a.google.com.",
+			"dns.google.",
 			"8.8.8.8",
 		},
 	}
 
 	for _, test := range tests {
-		resource.Test(t, resource.TestCase{
+		resource.UnitTest(t, resource.TestCase{
 			Providers: testAccProviders,
 			Steps: []resource.TestStep{
 				{

@@ -64,9 +64,6 @@ func (c *Config) Client() (interface{}, error) {
 		client.keyalgo = keyalgo
 		client.c.TsigSecret = map[string]string{keyname: c.keysecret}
 	}
-	client.transport = c.transport
-	client.c.Timeout = c.timeout
-	client.retries = c.retries
 	return &client, nil
 }
 

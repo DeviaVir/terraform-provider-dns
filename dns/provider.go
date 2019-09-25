@@ -237,7 +237,7 @@ func getAVal(record interface{}) (string, int, error) {
 
 	_, ok := record.(*dns.A)
 	if !ok {
-		return "", 0, fmt.Errorf("didn't get a A record")
+		return "", 0, fmt.Errorf("didn't get an A record")
 	}
 
 	recstr := record.(*dns.A).String()
@@ -275,7 +275,7 @@ func getAAAAVal(record interface{}) (string, int, error) {
 
 	_, ok := record.(*dns.AAAA)
 	if !ok {
-		return "", 0, fmt.Errorf("didn't get a AAAA record")
+		return "", 0, fmt.Errorf("didn't get an AAAA record")
 	}
 
 	recstr := record.(*dns.AAAA).String()
@@ -479,7 +479,7 @@ func resourceDnsRead(d *schema.ResourceData, meta interface{}, rrType uint16) ([
 
 		r, err := exchange(msg, true, meta)
 		if err != nil {
-			return nil, fmt.Errorf("Error querying DNS record: %s", err)
+			return nil, fmt.Errorf("Error querying DNS record (FQDN: %s): %s", fqdn, err)
 		}
 		switch r.Rcode {
 		case dns.RcodeSuccess:

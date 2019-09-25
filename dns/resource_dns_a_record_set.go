@@ -69,7 +69,7 @@ func resourceDnsARecordSetRead(d *schema.ResourceData, meta interface{}) error {
 		for _, record := range answers {
 			addr, t, err := getAVal(record)
 			if err != nil {
-				return fmt.Errorf("Error querying DNS record: %s", err)
+				return fmt.Errorf("Error querying DNS record (%#v): %s", record, err)
 			}
 			addresses.Add(addr)
 			ttl = append(ttl, t)

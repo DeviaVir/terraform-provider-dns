@@ -15,11 +15,11 @@ GOTAGS ?=
 GOMAXPROCS ?= 8
 
 # Get the project metadata
-GOVERSION := 1.12
+GOVERSION := 1.14
 PROJECT := github.com/DeviaVir/terraform-provider-dns
 OWNER := $(notdir $(patsubst %/,%,$(dir $(PROJECT))))
 NAME := $(notdir $(PROJECT))
-VERSION := 0.0.4
+VERSION := 0.0.5
 
 # Current system information
 GOOS ?= $(shell go env GOOS)
